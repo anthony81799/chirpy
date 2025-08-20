@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/anthony81799/chirpy/internal/auth"
@@ -64,15 +65,36 @@ func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) listChirpsHandler(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChips(r.Context())
+	chirps, err := cfg.db.GetChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't get chirps", err)
 		return
 	}
 
+	authorID := uuid.Nil
+	authorIDString := r.URL.Query().Get("author_id")
+	if authorIDString != "" {
+		authorID, err = uuid.Parse(authorIDString)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid author ID", err)
+			return
+		}
+	}
+
 	response := []Chirp{}
 	for _, chirp := range chirps {
+		if authorID != uuid.Nil && chirp.UserID != authorID {
+			continue
+		}
+
 		response = append(response, Chirp(chirp))
+	}
+
+	sortParam := r.URL.Query().Get("sort")
+	if sortParam == "desc" {
+		sort.Slice(response, func(i, j int) bool {
+			return response[i].CreatedAt.After(response[j].CreatedAt)
+		})
 	}
 
 	respondWithJSON(w, http.StatusOK,

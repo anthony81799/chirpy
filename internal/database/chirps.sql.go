@@ -56,12 +56,29 @@ func (q *Queries) DeleteChirpByID(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-const getChips = `-- name: GetChips :many
+const getChirpByID = `-- name: GetChirpByID :one
+SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE id = $1
+`
+
+func (q *Queries) GetChirpByID(ctx context.Context, id uuid.UUID) (Chirp, error) {
+	row := q.db.QueryRowContext(ctx, getChirpByID, id)
+	var i Chirp
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.UserID,
+	)
+	return i, err
+}
+
+const getChirps = `-- name: GetChirps :many
 SELECT id, created_at, updated_at, body, user_id FROM chirps ORDER BY created_at ASC
 `
 
-func (q *Queries) GetChips(ctx context.Context) ([]Chirp, error) {
-	rows, err := q.db.QueryContext(ctx, getChips)
+func (q *Queries) GetChirps(ctx context.Context) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirps)
 	if err != nil {
 		return nil, err
 	}
@@ -89,19 +106,35 @@ func (q *Queries) GetChips(ctx context.Context) ([]Chirp, error) {
 	return items, nil
 }
 
-const getChirpByID = `-- name: GetChirpByID :one
-SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE id = $1
+const getChirpsByUserID = `-- name: GetChirpsByUserID :many
+SELECT id, created_at, updated_at, body, user_id FROM chirps WHERE user_id = $1 ORDER BY created_at ASC
 `
 
-func (q *Queries) GetChirpByID(ctx context.Context, id uuid.UUID) (Chirp, error) {
-	row := q.db.QueryRowContext(ctx, getChirpByID, id)
-	var i Chirp
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Body,
-		&i.UserID,
-	)
-	return i, err
+func (q *Queries) GetChirpsByUserID(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, getChirpsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

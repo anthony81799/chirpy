@@ -15,7 +15,7 @@ VALUES (
         $2
     ) RETURNING *;
 
--- name: GetChips :many
+-- name: GetChirps :many
 SELECT * FROM chirps ORDER BY created_at ASC;
 
 -- name: GetChirpByID :one
