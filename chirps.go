@@ -50,3 +50,37 @@ func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request)
 		Chirp(chirp),
 	})
 }
+
+func (cfg *apiConfig) listChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.db.GetChips(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't get chirps", err)
+		return
+	}
+
+	response := []Chirp{}
+	for _, chirp := range chirps {
+		response = append(response, Chirp(chirp))
+	}
+
+	respondWithJSON(w, http.StatusOK,
+		response,
+	)
+}
+
+func (cfg *apiConfig) getChirpHandler(w http.ResponseWriter, r *http.Request) {
+	chirpID := r.PathValue("chirpID")
+	chirpIDParsed, err := uuid.Parse(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "chirp not found", err)
+		return
+	}
+
+	chirp, err := cfg.db.GetChirpByID(r.Context(), chirpIDParsed)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "chirp not found", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, Chirp(chirp))
+}
