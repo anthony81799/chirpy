@@ -34,6 +34,11 @@ func main() {
 		log.Fatal("SECRET must be set")
 	}
 
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY must be set")
+	}
+
 	const filepathRoot = "."
 	const port = "8080"
 
@@ -42,6 +47,7 @@ func main() {
 		db:             database.New(db),
 		platform:       platform,
 		secret:         secret,
+		polkaKey:       polkaKey,
 	}
 	handler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
 
