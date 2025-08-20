@@ -8,3 +8,5 @@ require (
 )
 
 require github.com/joho/godotenv v1.5.1 // direct
+
+require golang.org/x/crypto v0.41.0 // direct
