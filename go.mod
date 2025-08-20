@@ -10,3 +10,5 @@ require (
 require github.com/joho/godotenv v1.5.1 // direct
 
 require golang.org/x/crypto v0.41.0 // direct
+
+require github.com/golang-jwt/jwt/v5 v5.3.0 // direct

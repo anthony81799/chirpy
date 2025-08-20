@@ -29,6 +29,11 @@ func main() {
 		log.Fatal("PLATFORM must be set")
 	}
 
+	secret := os.Getenv("SECRET")
+	if secret == "" {
+		log.Fatal("SECRET must be set")
+	}
+
 	const filepathRoot = "."
 	const port = "8080"
 
@@ -36,6 +41,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             database.New(db),
 		platform:       platform,
+		secret:         secret,
 	}
 	handler := http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))
 

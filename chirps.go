@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/anthony81799/chirpy/internal/auth"
 	"github.com/anthony81799/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -18,9 +19,20 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing or malformed token", err)
+		return
+	}
+
+	user_id, err := auth.ValidateJWT(tokenString, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid or expired token", err)
+		return
+	}
+
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type response struct {
 		Chirp
@@ -28,7 +40,7 @@ func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request)
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
@@ -40,7 +52,7 @@ func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanBody(params.Body), UserID: params.UserID})
+	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanBody(params.Body), UserID: user_id})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp", err)
 		return
