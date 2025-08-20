@@ -19,7 +19,8 @@ type User struct {
 
 type AuthenticatedUser struct {
 	User
-	Token string `json:"token"`
+	AccessToken  string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (cfg *apiConfig) createUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -50,48 +51,5 @@ func (cfg *apiConfig) createUsersHandler(w http.ResponseWriter, r *http.Request)
 
 	respondWithJSON(w, http.StatusCreated, User{
 		ID: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email,
-	})
-}
-
-func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Password  string `json:"password"`
-		Email     string `json:"email"`
-		ExpiresIn int64  `json:"expires_in_seconds"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
-		return
-	}
-
-	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
-		return
-	}
-
-	err = auth.CheckPasswordHash(params.Password, user.HashedPassword)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
-		return
-	}
-
-	expiration := time.Duration(params.ExpiresIn) * time.Second
-	if expiration <= 0 || expiration > 1*time.Hour {
-		expiration = 1 * time.Hour
-	}
-
-	token, err := auth.MakeJWT(user.ID, cfg.secret, expiration)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT token", err)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, AuthenticatedUser{User: User{
-		ID: user.ID, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt, Email: user.Email}, Token: token,
 	})
 }
